@@ -1,7 +1,7 @@
 const { CommandoClient } = require('discord.js-commando');
 const { Structures } = require('discord.js');
 const path = require('path');
-const { prefix, token } = require('./config.json');
+const { prefix, token, discord_owner_id } = require('./config.json');
 
 Structures.extend('Guild', function(Guild) {
   class MusicGuild extends Guild {
@@ -27,7 +27,7 @@ Structures.extend('Guild', function(Guild) {
 
 const client = new CommandoClient({
   commandPrefix: prefix,
-  owner: 'your-discord-user-id' // change this to your Discord user ID
+  owner: discord_owner_id // value comes from config.json
 });
 
 client.registry
@@ -52,6 +52,18 @@ client.once('ready', () => {
     type: 'WATCHING',
     url: 'https://github.com/galnir/Master-Bot'
   });
+});
+
+client.on('voiceStateUpdate', async (___, newState) => {
+  if (
+    newState.member.user.bot &&
+    !newState.channelID &&
+    newState.guild.musicData.songDispatcher &&
+    newState.member.user.id == client.user.id
+  ) {
+    newState.guild.musicData.queue.length = 0;
+    newState.guild.musicData.songDispatcher.end();
+  }
 });
 
 client.on('guildMemberAdd', member => {

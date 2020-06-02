@@ -49,25 +49,33 @@ module.exports = class PlayCommand extends Command {
       const playlist = await youtube.getPlaylist(query).catch(function() {
         return message.say('Playlist is either private or it does not exist!');
       });
-      // remove the 10 if you removed the queue limit conditions below
-      const videosObj = await playlist.getVideos(10).catch(function() {
+      // add 10 as an argument in getVideos() if you choose to limit the queue
+      const videosObj = await playlist.getVideos().catch(function() {
         return message.say(
           'There was a problem getting one of the videos in the playlist!'
         );
       });
       for (let i = 0; i < videosObj.length; i++) {
-        const video = await videosObj[i].fetch();
-        // this can be uncommented if you choose to limit the queue
-        // if (message.guild.musicData.queue.length < 10) {
-        //
-        message.guild.musicData.queue.push(
-          PlayCommand.constructSongObj(video, voiceChannel)
-        );
-        // } else {
-        //   return message.say(
-        //     `I can't play the full playlist because there will be more than 10 songs in queue`
-        //   );
-        // }
+        if (videosObj[i].raw.status.privacyStatus == 'private') {
+          continue;
+        } else {
+          try {
+            const video = await videosObj[i].fetch();
+            // this can be uncommented if you choose to limit the queue
+            // if (message.guild.musicData.queue.length < 10) {
+            //
+            message.guild.musicData.queue.push(
+              PlayCommand.constructSongObj(video, voiceChannel)
+            );
+            // } else {
+            //   return message.say(
+            //     `I can't play the full playlist because there will be more than 10 songs in queue`
+            //   );
+            // }
+          } catch (err) {
+            console.error(err);
+          }
+        }
       }
       if (message.guild.musicData.isPlaying == false) {
         message.guild.musicData.isPlaying = true;
@@ -246,7 +254,9 @@ module.exports = class PlayCommand extends Command {
               message.guild.musicData.isPlaying = false;
               message.guild.musicData.nowPlaying = null;
               message.guild.musicData.songDispatcher = null;
-              return message.guild.me.voice.channel.leave();
+              if (message.guild.me.voice.channel) {
+                return message.guild.me.voice.channel.leave();
+              }
             }
           })
           .on('error', function(e) {
